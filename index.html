@@ -101,7 +101,11 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
 .wh{min-height:0;overflow:hidden}
 .dh{min-height:0;overflow:hidden;white-space:nowrap}
 .dh .ev{font-size:.72em;flex:0 1 auto;min-width:0}
-.evl{position:absolute;inset:0;pointer-events:none}
+.evl{position:absolute;inset:0}
+.dsc{display:block;color:var(--muted);white-space:pre-line}
+#evdWhen{color:var(--muted);margin-bottom:8px}
+#evdBody{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin-bottom:12px;-webkit-user-select:text;user-select:text}
+#evdBody a{color:var(--navy)}
 .evb{position:absolute;overflow:hidden;font-size:.72em;line-height:1.3;box-shadow:inset 0 1px 0 var(--sheet);background:var(--t);border-left:2px solid var(--c);padding:.1em .25em;color:var(--ink);text-align:left}
 .day~.evl .evb{font-size:.86em}
 </style>
@@ -173,6 +177,12 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
     <p id="bkMsg" role="status"></p>
   </section>
   <button class="close" id="bkClose">閉じる</button>
+</dialog>
+<dialog id="evd">
+  <h2 id="evdTitle"></h2>
+  <p id="evdWhen"></p>
+  <div id="evdBody"></div>
+  <button class="close" id="evdClose">閉じる</button>
 </dialog>
 <script>
 "use strict";
@@ -320,15 +330,15 @@ function renderTemplate(){
     for(const hr of HOURS){h+=`<div class="tl">${hr}</div>`;for(let i=0;i<7;i++)h+=`<div class="tc"></div>`}
     h+=`</div><div class="evl">`;
     const cw=95/7;
-    for(let i=0;i<7;i++) h+=blocks(dayEvents(addDays(s,i)).filter(e=>!e.all),5+cw*i,cw,WEEK_HEAD);
+    for(let i=0;i<7;i++){const d=addDays(s,i);h+=blocks(dayEvents(d).filter(e=>!e.all),5+cw*i,cw,WEEK_HEAD,()=>`data-go="${ymd(d)}"`)}
     t.innerHTML=h+`</div>`;
   }else{
     const evs=dayEvents(cur);
-    let h=`<div class="day"><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">予定${cur.getDay()===1?`<span class="note">安息日</span>`:""}${evs.filter(e=>e.all).map(e=>chip(e)).join("")}</div>`;
+    let h=`<div class="day"><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">予定${cur.getDay()===1?`<span class="note">安息日</span>`:""}${evs.filter(e=>e.all).map(e=>chip(e,evs.indexOf(e))).join("")}</div>`;
     for(const hr of HOURS) h+=`<div class="row"><div class="tl">${hr}</div><div></div></div>`;
     h+=`</div><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">メモ</div>`;
     for(let i=0;i<HOURS.length;i++) h+=`<div class="ruled"></div>`;
-    h+=`</div></div><div class="evl">${blocks(evs.filter(e=>!e.all),62*.08,62*.92,DAY_HEAD)}</div>`;
+    h+=`</div></div><div class="evl">${blocks(evs.filter(e=>!e.all),62*.08,62*.92,DAY_HEAD,e=>`data-ev="${evs.indexOf(e)}"`,true)}</div>`;
     t.innerHTML=h;
   }
 }
@@ -348,18 +358,18 @@ function rebuildDays(){
   for(const ev of cal.events){
     const c=cal.cals[ev.c];
     if(!c||calHidden[c.n]) continue;
-    const color=/^#[0-9a-f]{6}$/i.test(c.c)?c.c:"#6b7281",title=String(ev.t||"（題なし）").slice(0,200);
+    const color=/^#[0-9a-f]{6}$/i.test(c.c)?c.c:"#6b7281",title=String(ev.t||"（題なし）").slice(0,200),desc=ev.d?descText(ev.d):"";
     if(ev.a){
       if(!/^\d{4}-\d{2}-\d{2}$/.test(ev.s)||!/^\d{4}-\d{2}-\d{2}$/.test(ev.e)) continue;
       let d=fromYmd(ev.s),n=0;const end=fromYmd(ev.e);
-      do{add(ymd(d),{title,all:true,color});d=addDays(d,1)}while(d<end&&++n<366);
+      do{add(ymd(d),{title,all:true,color,desc});d=addDays(d,1)}while(d<end&&++n<366);
     }else{
       const s=new Date(ev.s),e=new Date(ev.e);
       if(isNaN(s)||isNaN(e)) continue;
       let d=new Date(s.getFullYear(),s.getMonth(),s.getDate()),n=0;
       do{
         const next=addDays(d,1),a=Math.max(s,d),b=Math.min(e,next);
-        add(ymd(d),{title,all:false,color,from:(a-d)/60000,to:Math.max((b-d)/60000,(a-d)/60000+30),label:a===+s?`${s.getHours()}:${pad(s.getMinutes())}`:""});
+        add(ymd(d),{title,all:false,color,desc,realTo:(b-d)/60000,from:(a-d)/60000,to:Math.max((b-d)/60000,(a-d)/60000+30),label:a===+s?`${s.getHours()}:${pad(s.getMinutes())}`:""});
         d=next;
       }while(d<e&&++n<60);
     }
@@ -367,15 +377,41 @@ function rebuildDays(){
   for(const k in dayMap) dayMap[k].sort((x,y)=>(y.all?1:0)-(x.all?1:0)||(x.from||0)-(y.from||0));
 }
 const dayEvents=d=>dayMap[ymd(d)]||[];
-function chip(e){
-  return `<div class="ev ${e.all?"all":""}" style="--c:${e.color};--t:${e.color}22">${e.label?esc(e.label)+" ":""}${esc(e.title)}</div>`;
+/* 説明欄は HTML で来ることがある。実行も読み込みもしない形で文字だけ取り出す */
+function descText(raw){
+  const s=String(raw).replace(/<br\s*\/?>/gi,"\n").replace(/<\/(p|div|li)>/gi,"\n");
+  const doc=new DOMParser().parseFromString(s,"text/html");
+  return (doc.body.textContent||"").replace(/\n{3,}/g,"\n\n").trim();
+}
+function showEvent(e){
+  const hm=m=>`${Math.floor(m/60)}:${pad(Math.round(m%60))}`;
+  $("evdTitle").textContent=e.title;
+  $("evdWhen").textContent=`${whenText()}　${e.all?"終日":`${hm(e.from)}〜${hm(e.realTo)}`}`;
+  const body=$("evdBody");body.textContent="";
+  if(!e.desc){body.textContent="説明はありません。"}
+  else for(const part of e.desc.split(/(https?:\/\/[^\s<>"']+)/)){
+    if(/^https?:\/\//.test(part)){
+      const a=document.createElement("a");a.href=part;a.target="_blank";a.rel="noopener noreferrer";a.textContent=part;body.append(a);
+    }else body.append(part);
+  }
+  $("evd").showModal();
+}
+function hitEvent(x,y){
+  for(const el of document.elementsFromPoint(x,y)){
+    const hit=el.closest&&el.closest("[data-ev]");
+    if(hit) return dayEvents(cur)[Number(hit.dataset.ev)]||null;
+  }
+  return null;
+}
+function chip(e,idx){
+  return `<div class="ev ${e.all?"all":""}" ${idx===undefined?"":`data-ev="${idx}"`} style="--c:${e.color};--t:${e.color}22">${e.label?esc(e.label)+" ":""}${esc(e.title)}</div>`;
 }
 function chips(list,max){
   if(!list.length) return "";
   const room=list.length>max?max-1:max;
-  return list.slice(0,room).map(chip).join("")+(list.length>room?`<div class="ev more">ほか${list.length-room}件</div>`:"");
+  return list.slice(0,room).map(e=>chip(e)).join("")+(list.length>room?`<div class="ev more">ほか${list.length-room}件</div>`:"");
 }
-function blocks(list,x,w,head){
+function blocks(list,x,w,head,attr,showDesc){
   const body=100-head,span=END_MIN-START_MIN,items=[];
   for(const e of list){
     const a=Math.max(e.from,START_MIN),b=Math.min(e.to,END_MIN);
@@ -392,7 +428,7 @@ function blocks(list,x,w,head){
   const n=Math.max(lanes.length,1),lw=w/n;
   return items.map(it=>{
     const top=head+body*(it.a-START_MIN)/span,h=body*(it.b-it.a)/span;
-    return `<div class="evb" style="--c:${it.e.color};--t:${it.e.color}22;left:${x+lw*it.lane}%;width:${lw}%;top:${top}%;height:${h}%">${it.e.label?esc(it.e.label)+" ":""}${esc(it.e.title)}</div>`;
+    return `<div class="evb" ${attr(it.e)} style="--c:${it.e.color};--t:${it.e.color}22;left:${x+lw*it.lane}%;width:${lw}%;top:${top}%;height:${h}%">${it.e.label?esc(it.e.label)+" ":""}${esc(it.e.title)}${showDesc&&it.e.desc?`<span class="dsc">${esc(it.e.desc)}</span>`:""}</div>`;
   }).join("");
 }
 function applyCal(data){
@@ -678,6 +714,7 @@ function finish(e,cancelled){
   const s=cur_stroke;cur_stroke=null;lctx.clearRect(0,0,W,H);
   if(!s) return;
   if(e.pointerType==="mouse"&&!cancelled&&s.pts.length<=3){
+    if(view==="day"){const ev=hitEvent(e.clientX,e.clientY);if(ev){showEvent(ev);return}}
     const go=hitGo(e.clientX,e.clientY);
     if(go&&view!=="day"){goTo(go);return}
   }
@@ -692,7 +729,10 @@ function touchUp(e){
   if(Date.now()-lastPen<800) return;
   const dx=e.clientX-g.x,dy=e.clientY-g.y,ax=Math.abs(dx),ay=Math.abs(dy);
   if(ax>70&&ax>ay*1.5){step(dx<0?1:-1);return}
-  if(ax<12&&ay<12&&Date.now()-g.t<500&&view!=="day"){const go=hitGo(e.clientX,e.clientY);if(go) goTo(go)}
+  if(ax<12&&ay<12&&Date.now()-g.t<500){
+    if(view==="day"){const ev=hitEvent(e.clientX,e.clientY);if(ev) showEvent(ev)}
+    else{const go=hitGo(e.clientX,e.clientY);if(go) goTo(go)}
+  }
 }
 ink.addEventListener("pointerdown",down);
 ink.addEventListener("pointermove",move);
@@ -755,6 +795,7 @@ $("calSave").onclick=calConnect;
 $("calNow").onclick=()=>calSync(true);
 $("calOff").onclick=calDisconnect;
 $("bkClose").onclick=()=>$("bk").close();
+$("evdClose").onclick=()=>$("evd").close();
 $("bkExport").onclick=exportBackup;
 $("bkImport").onclick=()=>$("bkFile").click();
 $("bkFile").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f) importBackup(f)};
