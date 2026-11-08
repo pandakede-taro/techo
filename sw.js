@@ -1,6 +1,6 @@
 /* ネットなしで開くための保管係。手書きはここを通らない（iPad の IndexedDB に直接保存する）。
    プログラムを直したら VERSION を上げる。 */
-const VERSION = "techo-v1";
+const VERSION = "techo-v2";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {

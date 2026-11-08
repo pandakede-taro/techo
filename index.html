@@ -84,6 +84,26 @@ dialog p{margin:0 0 12px;line-height:1.7}
 #bkMsg{min-height:1.7em;font-weight:700;color:var(--navy);-webkit-user-select:text;user-select:text}
 #bkMsg.warn{color:var(--terra)}
 .close{display:block;margin-left:auto}
+dialog{max-height:calc(100dvh - 32px);overflow:auto}
+dialog section+section{border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
+#calUrl{width:100%;min-height:40px;border:1px solid var(--rule);border-radius:8px;background:var(--desk);padding:0 10px;margin-bottom:8px}
+#calList{display:grid;gap:2px;margin-bottom:12px}
+#calList label{display:flex;align-items:center;gap:8px;min-height:36px}
+#calList input{width:20px;height:20px;flex:none}
+#calList i{width:12px;height:12px;border-radius:50%;flex:none}
+#calMsg{min-height:1.7em;font-weight:700;color:var(--navy);-webkit-user-select:text;user-select:text}
+#calMsg.warn{color:var(--terra)}
+.mc{min-height:0;overflow:hidden}
+.ev{font-size:.76em;font-weight:400;line-height:1.45;white-space:nowrap;overflow:hidden;border-left:2px solid var(--c);padding-left:.3em;color:var(--ink);text-align:left}
+.ev.all{background:var(--t)}
+.ev.more{border:0;color:var(--muted)}
+.wh{min-height:0;overflow:hidden}
+.dh{min-height:0;overflow:hidden;white-space:nowrap}
+.dh .ev{font-size:.72em;flex:0 1 auto;min-width:0}
+.evl{position:absolute;inset:0;pointer-events:none}
+.evb{position:absolute;overflow:hidden;font-size:.72em;line-height:1.3;box-shadow:inset 0 1px 0 var(--sheet);background:var(--t);border-left:2px solid var(--c);padding:.1em .25em;color:var(--ink);text-align:left}
+.day~.evl .evb{font-size:.86em}
 </style>
 </head>
 <body>
@@ -114,7 +134,7 @@ dialog p{margin:0 0 12px;line-height:1.7}
     <button id="undo">戻す</button>
     <button id="redo">やり直す</button>
     <button class="tool" id="finger">指でも書く</button>
-    <button id="backup">バックアップ</button>
+    <button id="backup">設定</button>
   </div>
 </div>
 <div id="status" role="status"></div>
@@ -126,14 +146,32 @@ dialog p{margin:0 0 12px;line-height:1.7}
   </div>
 </div>
 <dialog id="bk">
-  <h2>バックアップ</h2>
-  <p id="bkInfo"></p>
-  <div class="acts">
-    <button class="main" id="bkExport">書き出す</button>
-    <button class="sub" id="bkImport">取り込む</button>
-    <input type="file" id="bkFile" accept=".json,application/json" hidden>
-  </div>
-  <p id="bkMsg" role="status"></p>
+  <section>
+    <h2>Google カレンダー</h2>
+    <p id="calInfo"></p>
+    <div id="calConnect" hidden>
+      <input id="calUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" aria-label="予定を受け取るアドレス">
+      <div class="acts"><button class="main" id="calSave">つなぐ</button></div>
+    </div>
+    <div id="calOn" hidden>
+      <div id="calList"></div>
+      <div class="acts">
+        <button class="main" id="calNow">今すぐ更新</button>
+        <button class="sub" id="calOff">つなぐのをやめる</button>
+      </div>
+    </div>
+    <p id="calMsg" role="status"></p>
+  </section>
+  <section>
+    <h2>バックアップ</h2>
+    <p id="bkInfo"></p>
+    <div class="acts">
+      <button class="main" id="bkExport">書き出す</button>
+      <button class="sub" id="bkImport">取り込む</button>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+    </div>
+    <p id="bkMsg" role="status"></p>
+  </section>
   <button class="close" id="bkClose">閉じる</button>
 </dialog>
 <script>
@@ -268,25 +306,181 @@ function renderTemplate(){
     const first=new Date(cur.getFullYear(),cur.getMonth(),1),start=sunday(first);
     const days=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate(),rows=Math.ceil((first.getDay()+days)/7);
     let h=`<div class="head" style="grid-template-columns:repeat(7,1fr)">`+WEEK.map((w,i)=>`<div class="${i===0?"sun":i===6?"sat":""}">${w}</div>`).join("")+`</div>`;
-    h+=`<div class="month" style="grid-template-rows:repeat(${rows},1fr)">`;
+    h+=`<div class="month" style="grid-template-rows:repeat(${rows},minmax(0,1fr))">`;
+    const max=rows>5?3:4;
     for(let i=0;i<rows*7;i++){
       const d=addDays(start,i),out=d.getMonth()!==cur.getMonth();
-      h+=`<div class="mc ${out?"out":dayClass(d)} ${ymd(d)===now?"today":""}" data-go="${ymd(d)}"><span class="num">${d.getDate()}</span>${out?"":rest(d)}</div>`;
+      h+=`<div class="mc ${out?"out":dayClass(d)} ${ymd(d)===now?"today":""}" data-go="${ymd(d)}"><span class="num">${d.getDate()}</span>${out?"":rest(d)}${chips(dayEvents(d),max)}</div>`;
     }
     t.innerHTML=h+`</div>`;
   }else if(view==="week"){
     const s=sunday(cur);
-    let h=`<div class="week" style="grid-template-rows:7% repeat(${HOURS.length},1fr)"><div class="wh"></div>`;
-    for(let i=0;i<7;i++){const d=addDays(s,i);h+=`<div class="wh ${dayClass(d)} ${ymd(d)===now?"today":""}" data-go="${ymd(d)}">${WEEK[i]} <span class="num">${d.getDate()}</span>${rest(d)}</div>`}
+    let h=`<div class="week" style="grid-template-rows:${WEEK_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="wh"></div>`;
+    for(let i=0;i<7;i++){const d=addDays(s,i);h+=`<div class="wh ${dayClass(d)} ${ymd(d)===now?"today":""}" data-go="${ymd(d)}">${WEEK[i]} <span class="num">${d.getDate()}</span>${rest(d)}${chips(dayEvents(d).filter(e=>e.all),2)}</div>`}
     for(const hr of HOURS){h+=`<div class="tl">${hr}</div>`;for(let i=0;i<7;i++)h+=`<div class="tc"></div>`}
+    h+=`</div><div class="evl">`;
+    const cw=95/7;
+    for(let i=0;i<7;i++) h+=blocks(dayEvents(addDays(s,i)).filter(e=>!e.all),5+cw*i,cw,WEEK_HEAD);
     t.innerHTML=h+`</div>`;
   }else{
-    let h=`<div class="day"><div class="col" style="grid-template-rows:6% repeat(${HOURS.length},1fr)"><div class="dh">予定${cur.getDay()===1?`<span class="note">安息日</span>`:""}</div>`;
+    const evs=dayEvents(cur);
+    let h=`<div class="day"><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">予定${cur.getDay()===1?`<span class="note">安息日</span>`:""}${evs.filter(e=>e.all).map(e=>chip(e)).join("")}</div>`;
     for(const hr of HOURS) h+=`<div class="row"><div class="tl">${hr}</div><div></div></div>`;
-    h+=`</div><div class="col" style="grid-template-rows:6% repeat(${HOURS.length},1fr)"><div class="dh">メモ</div>`;
+    h+=`</div><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">メモ</div>`;
     for(let i=0;i<HOURS.length;i++) h+=`<div class="ruled"></div>`;
-    t.innerHTML=h+`</div></div>`;
+    h+=`</div></div><div class="evl">${blocks(evs.filter(e=>!e.all),62*.08,62*.92,DAY_HEAD)}</div>`;
+    t.innerHTML=h;
   }
+}
+
+/* 予定の表示（Google カレンダーから受け取った題は、必ず文字として扱う） */
+const WEEK_HEAD=11,DAY_HEAD=6,START_MIN=5*60,END_MIN=23*60;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+let cal={at:0,cals:[],events:[]},calHidden={},dayMap={};
+function rebuildDays(){
+  dayMap={};
+  const seen=new Set();
+  const add=(day,e)=>{
+    const k=day+"|"+e.title+"|"+(e.all?"":e.from);
+    if(seen.has(k)) return;
+    seen.add(k);(dayMap[day]=dayMap[day]||[]).push(e);
+  };
+  for(const ev of cal.events){
+    const c=cal.cals[ev.c];
+    if(!c||calHidden[c.n]) continue;
+    const color=/^#[0-9a-f]{6}$/i.test(c.c)?c.c:"#6b7281",title=String(ev.t||"（題なし）").slice(0,200);
+    if(ev.a){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(ev.s)||!/^\d{4}-\d{2}-\d{2}$/.test(ev.e)) continue;
+      let d=fromYmd(ev.s),n=0;const end=fromYmd(ev.e);
+      do{add(ymd(d),{title,all:true,color});d=addDays(d,1)}while(d<end&&++n<366);
+    }else{
+      const s=new Date(ev.s),e=new Date(ev.e);
+      if(isNaN(s)||isNaN(e)) continue;
+      let d=new Date(s.getFullYear(),s.getMonth(),s.getDate()),n=0;
+      do{
+        const next=addDays(d,1),a=Math.max(s,d),b=Math.min(e,next);
+        add(ymd(d),{title,all:false,color,from:(a-d)/60000,to:Math.max((b-d)/60000,(a-d)/60000+30),label:a===+s?`${s.getHours()}:${pad(s.getMinutes())}`:""});
+        d=next;
+      }while(d<e&&++n<60);
+    }
+  }
+  for(const k in dayMap) dayMap[k].sort((x,y)=>(y.all?1:0)-(x.all?1:0)||(x.from||0)-(y.from||0));
+}
+const dayEvents=d=>dayMap[ymd(d)]||[];
+function chip(e){
+  return `<div class="ev ${e.all?"all":""}" style="--c:${e.color};--t:${e.color}22">${e.label?esc(e.label)+" ":""}${esc(e.title)}</div>`;
+}
+function chips(list,max){
+  if(!list.length) return "";
+  const room=list.length>max?max-1:max;
+  return list.slice(0,room).map(chip).join("")+(list.length>room?`<div class="ev more">ほか${list.length-room}件</div>`:"");
+}
+function blocks(list,x,w,head){
+  const body=100-head,span=END_MIN-START_MIN,items=[];
+  for(const e of list){
+    const a=Math.max(e.from,START_MIN),b=Math.min(e.to,END_MIN);
+    if(b<=START_MIN||a>=END_MIN) items.push({e,a:e.from<START_MIN?START_MIN:END_MIN-30,b:e.from<START_MIN?START_MIN+30:END_MIN});
+    else items.push({e,a,b:Math.max(b,a+30)});
+  }
+  items.sort((p,q)=>p.a-q.a||q.b-p.b);
+  const lanes=[];
+  for(const it of items){
+    let i=lanes.findIndex(end=>end<=it.a);
+    if(i<0){i=lanes.length;lanes.push(0)}
+    lanes[i]=it.b;it.lane=i;
+  }
+  const n=Math.max(lanes.length,1),lw=w/n;
+  return items.map(it=>{
+    const top=head+body*(it.a-START_MIN)/span,h=body*(it.b-it.a)/span;
+    return `<div class="evb" style="--c:${it.e.color};--t:${it.e.color}22;left:${x+lw*it.lane}%;width:${lw}%;top:${top}%;height:${h}%">${it.e.label?esc(it.e.label)+" ":""}${esc(it.e.title)}</div>`;
+  }).join("");
+}
+function applyCal(data){
+  cal=data;rebuildDays();renderTemplate();
+}
+const CAL_RE=/^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/;
+let calSyncing=false;
+async function fetchCal(url){
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),90000);
+  try{
+    const r=await fetch(url,{signal:ac.signal,cache:"no-store",credentials:"omit"});
+    if(!r.ok) throw new Error("http");
+    const d=await r.json();
+    if(!d||d.v!==1||!Array.isArray(d.cals)||!Array.isArray(d.events)) throw new Error("format");
+    return d;
+  }finally{clearTimeout(timer)}
+}
+async function calSync(manual){
+  if(calSyncing) return;
+  const url=await idbGet("meta","calUrl").catch(()=>null);
+  if(!url) return;
+  calSyncing=true;
+  if(manual) calMsg("更新しています。少し時間がかかります…");
+  try{
+    const d=await fetchCal(url);
+    await idbPut("meta","calData",d);
+    applyCal(d);
+    if(manual) calMsg(`更新しました（予定 ${d.events.length} 件）。`);
+    if($("bk").open) renderCalSettings();
+  }catch(e){
+    if(manual) calMsg("更新できませんでした。Wi-Fi につながっているか確かめてください。前回の予定はそのまま表示します。",true);
+  }
+  calSyncing=false;
+}
+function calAutoSync(){
+  if(navigator.onLine!==false&&Date.now()-(cal.at||0)>15*60000) calSync(false);
+}
+function calMsg(text,warn){const m=$("calMsg");m.textContent=text;m.classList.toggle("warn",!!warn)}
+async function renderCalSettings(){
+  const url=await idbGet("meta","calUrl").catch(()=>null);
+  $("calConnect").hidden=!!url;$("calOn").hidden=!url;
+  if(!url){
+    $("calInfo").textContent="予定を受け取るアドレスを貼り付けると、Google カレンダーの予定が紙に表示されます。手帳からカレンダーを変更することはありません。";
+    return;
+  }
+  $("calInfo").textContent=cal.at?`最後に受け取ったのは ${new Date(cal.at).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})} です。Wi-Fi があるときに自動で更新します。表示するカレンダーを選べます。`:"まだ予定を受け取っていません。";
+  const box=$("calList");box.textContent="";
+  for(const c of cal.cals){
+    const name=String(c.n||"");
+    const l=document.createElement("label"),i=document.createElement("input"),dot=document.createElement("i"),s=document.createElement("span");
+    i.type="checkbox";i.checked=!calHidden[name];
+    i.onchange=async()=>{
+      if(i.checked) delete calHidden[name];else calHidden[name]=1;
+      await idbPut("meta","calHidden",calHidden).catch(()=>{});
+      rebuildDays();renderTemplate();
+    };
+    dot.style.background=/^#[0-9a-f]{6}$/i.test(c.c)?c.c:"#6b7281";
+    s.textContent=name;
+    l.append(i,dot,s);box.append(l);
+  }
+}
+async function calConnect(){
+  const url=$("calUrl").value.trim();
+  if(!CAL_RE.test(url)){calMsg("アドレスの形が違います。script.google.com で始まり /exec で終わるものを貼り付けてください。",true);return}
+  calMsg("つないでいます。少し時間がかかります…");
+  try{
+    const d=await fetchCal(url);
+    await idbPut("meta","calUrl",url);
+    await idbPut("meta","calData",d);
+    $("calUrl").value="";
+    applyCal(d);renderCalSettings();
+    calMsg(`つながりました（予定 ${d.events.length} 件）。`);
+  }catch(e){
+    calMsg("つなげませんでした。アドレスと Wi-Fi を確かめてください。",true);
+  }
+}
+async function calDisconnect(){
+  await idbDel("meta","calUrl");await idbDel("meta","calData");
+  applyCal({at:0,cals:[],events:[]});renderCalSettings();
+  calMsg("つなぐのをやめました。Google カレンダーの予定はそのまま残っています。");
+}
+async function calBoot(){
+  try{
+    const[d,h]=await Promise.all([idbGet("meta","calData"),idbGet("meta","calHidden")]);
+    if(h&&typeof h==="object") calHidden=h;
+    if(d) applyCal(d);
+  }catch(e){}
+  calAutoSync();
 }
 function whenText(){
   const m=d=>`${d.getMonth()+1}月${d.getDate()}日`;
@@ -556,7 +750,10 @@ for(let i=0;i<3;i++){
 $("eraser").onclick=()=>{tool.mode=tool.mode==="erase"?"pen":"erase";syncButtons()};
 $("undo").onclick=undo;$("redo").onclick=redo;
 $("finger").onclick=()=>{tool.finger=!tool.finger;syncButtons()};
-$("backup").onclick=()=>{flush();bkMsg("");refreshBackupInfo();$("bk").showModal()};
+$("backup").onclick=()=>{flush();bkMsg("");calMsg("");refreshBackupInfo();renderCalSettings();$("bk").showModal()};
+$("calSave").onclick=calConnect;
+$("calNow").onclick=()=>calSync(true);
+$("calOff").onclick=calDisconnect;
 $("bkClose").onclick=()=>$("bk").close();
 $("bkExport").onclick=exportBackup;
 $("bkImport").onclick=()=>$("bkFile").click();
@@ -583,13 +780,13 @@ if("serviceWorker" in navigator){
 }
 
 /* 起動 */
-document.addEventListener("visibilitychange",()=>{if(document.hidden) flush()});
+document.addEventListener("visibilitychange",()=>{if(document.hidden) flush();else calAutoSync()});
 window.addEventListener("pagehide",flush);
 new ResizeObserver(fit).observe($("stage"));
 const themeChange=()=>{readPalette();redraw()};
 try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",themeChange)}catch(e){}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-readPalette();fit();refresh();refreshBackupBadge();
+readPalette();fit();refresh();refreshBackupBadge();calBoot();
 </script>
 </body>
 </html>
