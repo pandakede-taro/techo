@@ -48,8 +48,41 @@ button:disabled{opacity:.4;cursor:default}
 #status{position:fixed;z-index:5;pointer-events:none;left:max(8px,env(safe-area-inset-left,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));font-size:.78rem;color:var(--muted);background:var(--desk);padding:2px 6px;border-radius:6px}
 #status:empty{display:none}
 #status.warn{color:var(--terra);font-weight:700}
-#stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center}
-#paper{position:relative;background:var(--sheet);box-shadow:0 0 0 1px var(--rule);overflow:hidden;font-size:calc(var(--u)*16)}
+#stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#paper{position:relative;background:var(--sheet);overflow:hidden;font-size:calc(var(--u)*16);transform-origin:0 0}
+#paper::after{content:"";position:absolute;inset:0;border:1px solid var(--rule);pointer-events:none}
+#zoomOut{position:absolute;z-index:3;top:8px;right:8px;background:var(--navy);color:var(--sheet);font-weight:700;padding:0 14px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.bar svg{display:block;margin:auto;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bar .slim{min-width:30px;padding:0 2px}
+#evMode{font-weight:700;color:var(--navy)}
+#evMode[data-m="1"]{opacity:.45}
+#evMode[data-m="2"]{color:var(--muted);text-decoration:line-through}
+body[data-show="1"] .ev,body[data-show="1"] .evb{opacity:.38}
+body[data-show="1"] .dsc{display:none}
+body[data-show="2"] .ev,body[data-show="2"] .evb{visibility:hidden}
+.td{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:.55em;padding:0 .7em;border-bottom:1px solid var(--line);min-height:0;overflow:hidden}
+.td .bx{width:1.1em;height:1.1em;border:1.5px solid var(--rule);border-radius:.22em;display:grid;place-items:center;font-size:.9em;line-height:1;color:var(--muted)}
+.td .tx{min-width:0;line-height:1.3}
+.td .t1,.td .t2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td .t1{font-size:.86em}
+.td .t2{font-size:.66em;color:var(--muted)}
+.td.done .t1{text-decoration:line-through;color:var(--muted)}
+.td .late{color:var(--terra);font-weight:700}
+.td.more .t1{color:var(--muted)}
+.dh.mid{border-top:1px solid var(--rule);margin-top:-1px}
+#tdList{display:grid;gap:10px;margin-bottom:12px}
+#tdList div{line-height:1.5;-webkit-user-select:text;user-select:text}
+#tdList small{display:block;color:var(--muted)}
+#tdList .done{color:var(--muted);text-decoration:line-through}
+.opt{display:flex;align-items:center;gap:8px;min-height:40px;margin-bottom:8px}
+.opt input{width:20px;height:20px;flex:none}
+@media (max-width:860px){
+  .bar{gap:4px}
+  .bar button{min-width:32px;padding:0 4px}
+  .bar .slim{min-width:28px;padding:0 2px}
+  .when{min-width:0;font-size:1.02rem}
+  .seg button{min-width:34px}
+}
 #tmpl,canvas{position:absolute;inset:0;width:100%;height:100%}
 #ink{touch-action:none;cursor:crosshair}
 #live{pointer-events:none}
@@ -129,20 +162,23 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
     <button class="tool" id="c2" aria-label="赤のペン"><span class="dot" style="width:18px;height:18px;color:var(--pen-terra)"></span></button>
   </div>
   <div class="group" role="group" aria-label="ペンの太さ">
-    <button class="tool" id="w0" aria-label="細い"><span class="dot" style="width:5px;height:5px"></span></button>
-    <button class="tool" id="w1" aria-label="中くらい"><span class="dot" style="width:9px;height:9px"></span></button>
-    <button class="tool" id="w2" aria-label="太い"><span class="dot" style="width:14px;height:14px"></span></button>
+    <button class="tool slim" id="w0" aria-label="細い"><span class="dot" style="width:5px;height:5px"></span></button>
+    <button class="tool slim" id="w1" aria-label="中くらい"><span class="dot" style="width:9px;height:9px"></span></button>
+    <button class="tool slim" id="w2" aria-label="太い"><span class="dot" style="width:14px;height:14px"></span></button>
   </div>
   <div class="group">
-    <button class="tool" id="eraser">消しゴム</button>
-    <button id="undo">戻す</button>
-    <button id="redo">やり直す</button>
-    <button class="tool" id="finger">指でも書く</button>
-    <button id="backup">設定</button>
+    <button class="tool" id="eraser" aria-label="消しゴム"><svg viewBox="0 0 24 24"><path d="M8.5 19.5 3.8 14.8a1.5 1.5 0 0 1 0-2.1l8.9-8.9a1.5 1.5 0 0 1 2.1 0l5.4 5.4a1.5 1.5 0 0 1 0 2.1l-8.2 8.2z"/><path d="m8.2 8.3 7.5 7.5M8.5 19.5H20"/></svg></button>
+    <button id="undo" aria-label="戻す"><svg viewBox="0 0 24 24"><path d="M8 5 4 9l4 4"/><path d="M4 9h9.5a5.5 5.5 0 0 1 0 11H9"/></svg></button>
+    <button id="redo" aria-label="やり直す"><svg viewBox="0 0 24 24"><path d="m16 5 4 4-4 4"/><path d="M20 9h-9.5a5.5 5.5 0 0 0 0 11H15"/></svg></button>
+  </div>
+  <div class="group">
+    <button id="evMode" aria-label="予定の見せ方">予定</button>
+    <button id="backup" aria-label="設定"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
   </div>
 </div>
 <div id="status" role="status"></div>
 <div id="stage">
+  <button id="zoomOut" hidden>全体に戻す</button>
   <div id="paper">
     <div id="tmpl"></div>
     <canvas id="ink"></canvas>
@@ -165,6 +201,12 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
       </div>
     </div>
     <p id="calMsg" role="status"></p>
+    <p id="todoInfo"></p>
+  </section>
+  <section>
+    <h2>書き方</h2>
+    <label class="opt"><input type="checkbox" id="finger"> 指でも書く（ふだんは Apple Pencil だけ）</label>
+    <p>二本指で広げると拡大、つまむと戻ります。拡大中は一本指で紙を動かせます。</p>
   </section>
   <section>
     <h2>バックアップ</h2>
@@ -178,6 +220,12 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
   </section>
   <button class="close" id="bkClose">閉じる</button>
 </dialog>
+<dialog id="tdd">
+  <h2 id="tddTitle"></h2>
+  <div id="tdList"></div>
+  <p>済の印は、奉仕の手帳で付けるか、Claude が付けます。ここでは手書きで印を書けます。</p>
+  <button class="close" id="tddClose">閉じる</button>
+</dialog>
 <dialog id="evd">
   <h2 id="evdTitle"></h2>
   <p id="evdWhen"></p>
@@ -188,7 +236,8 @@ input{-webkit-user-select:text;user-select:text;font:inherit;color:inherit}
 "use strict";
 const W=1200,H=900,HOURS=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
 const WEEK=["日","月","火","水","木","金","土"];
-const WIDTHS=[1.5,2.5,4.2],VIEWKEY="ipad-techo:view",DAY=86400000;
+const WIDTHS=[1.5,2.5,4.2],VIEWKEY="ipad-techo:view",FINGERKEY="ipad-techo:finger",EVKEY="ipad-techo:ev",DAY=86400000;
+const TODO_ROWS=8;
 const KEY_RE=/^(m-\d{4}-\d{2}|[wd]-\d{4}-\d{2}-\d{2})$/;
 const $=id=>document.getElementById(id);
 const paper=$("paper"),ink=$("ink"),live=$("live"),ctx=ink.getContext("2d"),lctx=live.getContext("2d");
@@ -206,6 +255,8 @@ let view="month";
 try{const v=localStorage.getItem(VIEWKEY);if(["month","week","day"].includes(v))view=v}catch(e){}
 let cur=new Date();
 const tool={mode:"pen",color:0,width:1,finger:false};
+let evMode=0;
+try{tool.finger=localStorage.getItem(FINGERKEY)==="1";const m=Number(localStorage.getItem(EVKEY));if(m===1||m===2)evMode=m}catch(e){}
 const pages={};
 let palette=[];
 function keyOf(){
@@ -295,17 +346,48 @@ function readPalette(){
   const cs=getComputedStyle(document.documentElement);
   palette=["--pen-ink","--pen-navy","--pen-terra"].map(v=>cs.getPropertyValue(v).trim());
 }
+/* 拡大：紙に CSS の拡大をかけ、指を離したら線を細かく描き直してくっきりさせる（画素数は iPad が扱える範囲に抑える） */
+const zoom={z:1,x:0,y:0};
+let rasterZ=0,rasterTimer=null;
+function raster(){
+  const w=paper.offsetWidth,h=paper.offsetHeight;
+  if(!w||!h) return;
+  const dpr=Math.min(window.devicePixelRatio||1,3),k=Math.max(1,Math.min(dpr*zoom.z,Math.sqrt(12e6/(w*h))));
+  rasterZ=zoom.z;
+  for(const[cv,c]of[[ink,ctx],[live,lctx]]){
+    cv.width=Math.round(w*k);cv.height=Math.round(h*k);
+    c.setTransform(cv.width/W,0,0,cv.height/H,0,0);c.lineCap="round";c.lineJoin="round";
+  }
+  redraw();
+}
+function rasterSoon(){
+  clearTimeout(rasterTimer);
+  rasterTimer=setTimeout(()=>{if(rasterZ===zoom.z) return;if(activeId!==null||pinch) rasterSoon();else raster()},220);
+}
+function paperOrigin(){
+  const r=$("stage").getBoundingClientRect();
+  return [r.left+(r.width-paper.offsetWidth)/2,r.top+(r.height-paper.offsetHeight)/2];
+}
+function applyZoom(){
+  const w=paper.offsetWidth,h=paper.offsetHeight;
+  zoom.z=Math.max(1,Math.min(4,zoom.z));
+  zoom.x=Math.min(0,Math.max(w-w*zoom.z,zoom.x));zoom.y=Math.min(0,Math.max(h-h*zoom.z,zoom.y));
+  paper.style.transform=zoom.z===1?"":`translate(${zoom.x}px,${zoom.y}px) scale(${zoom.z})`;
+  $("zoomOut").hidden=zoom.z===1;
+  rasterSoon();
+}
+function zoomAt(cx,cy,z){
+  const[ox,oy]=paperOrigin(),px=(cx-ox-zoom.x)/zoom.z,py=(cy-oy-zoom.y)/zoom.z;
+  zoom.z=Math.max(1,Math.min(4,z));zoom.x=cx-ox-px*zoom.z;zoom.y=cy-oy-py*zoom.z;
+  applyZoom();
+}
+function resetZoom(){zoom.z=1;zoom.x=zoom.y=0;applyZoom()}
 function fit(){
   const r=$("stage").getBoundingClientRect();
   if(r.width<=0||r.height<=0) return;
   const s=Math.min(r.width/W,r.height/H),w=Math.floor(W*s),h=Math.floor(H*s);
   paper.style.width=w+"px";paper.style.height=h+"px";paper.style.setProperty("--u",s+"px");
-  const dpr=Math.min(window.devicePixelRatio||1,3);
-  for(const[cv,c]of[[ink,ctx],[live,lctx]]){
-    cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
-    c.setTransform(w*dpr/W,0,0,h*dpr/H,0,0);c.lineCap="round";c.lineJoin="round";
-  }
-  redraw();
+  applyZoom();raster();
 }
 
 /* 紙の罫線 */
@@ -336,8 +418,16 @@ function renderTemplate(){
     const evs=dayEvents(cur);
     let h=`<div class="day"><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">予定${cur.getDay()===1?`<span class="note">安息日</span>`:""}${evs.filter(e=>e.all).map(e=>chip(e,evs.indexOf(e))).join("")}</div>`;
     for(const hr of HOURS) h+=`<div class="row"><div class="tl">${hr}</div><div></div></div>`;
-    h+=`</div><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh">メモ</div>`;
-    for(let i=0;i<HOURS.length;i++) h+=`<div class="ruled"></div>`;
+    h+=`</div><div class="col" style="grid-template-rows:${DAY_HEAD}% repeat(${HOURS.length},minmax(0,1fr))"><div class="dh" data-td="1">やること</div>`;
+    const tds=dayTodos(cur),room=tds.length>TODO_ROWS?TODO_ROWS-1:TODO_ROWS;
+    for(let i=0;i<TODO_ROWS;i++){
+      const it=tds[i];
+      if(it&&i<room) h+=`<div class="td ${it.done?"done":""}" data-td="1"><span class="bx">${it.done?"✓":""}</span><span class="tx"><span class="t1">${esc(it.t)}</span><span class="t2">${todoSub(it)}</span></span></div>`;
+      else if(it) h+=`<div class="td more" data-td="1"><span class="bx"></span><span class="tx"><span class="t1">ほか ${tds.length-room} 件（指で押すと全部）</span></span></div>`;
+      else h+=`<div class="td"><span class="bx"></span><span class="tx"></span></div>`;
+    }
+    h+=`<div class="dh mid">メモ</div>`;
+    for(let i=TODO_ROWS+1;i<HOURS.length;i++) h+=`<div class="ruled"></div>`;
     h+=`</div></div><div class="evl">${blocks(evs.filter(e=>!e.all),62*.08,62*.92,DAY_HEAD,e=>`data-ev="${evs.indexOf(e)}"`,true)}</div>`;
     t.innerHTML=h;
   }
@@ -377,6 +467,47 @@ function rebuildDays(){
   for(const k in dayMap) dayMap[k].sort((x,y)=>(y.all?1:0)-(x.all?1:0)||(x.from||0)-(y.from||0));
 }
 const dayEvents=d=>dayMap[ymd(d)]||[];
+/* やること：奉仕の手帳の「これからの準備」と「決めること」の写し（読むだけ）。済は奉仕の手帳が正本 */
+let todos=[];
+function rebuildTodos(){
+  todos=[];
+  const src=cal.todo&&Array.isArray(cal.todo.items)?cal.todo.items:[];
+  for(const it of src.slice(0,600)){
+    if(!it||typeof it.t!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(it.due)) continue;
+    todos.push({t:it.t.slice(0,160),due:it.due,who:String(it.who||"").slice(0,12),ev:String(it.ev||"").slice(0,120),done:!!it.done});
+  }
+}
+const mine=it=>it.who==="Claude"?1:0;
+function dayTodos(d){
+  const k=ymd(d),now=ymd(new Date()),out=[];
+  for(const it of todos){
+    if(it.due===k) out.push(it);
+    else if(k===now&&it.due<k&&!it.done) out.push({...it,late:true});
+  }
+  return out.sort((a,b)=>(a.done?1:0)-(b.done?1:0)||mine(a)-mine(b)||(a.late?0:1)-(b.late?0:1)||a.due.localeCompare(b.due));
+}
+function todoSub(it){
+  const d=fromYmd(it.due);
+  return (it.late?`<span class="late">遅れ ${d.getMonth()+1}/${d.getDate()} まで</span>　`:"")+esc([it.who,it.ev].filter(Boolean).join("｜"));
+}
+function showTodos(){
+  const list=dayTodos(cur),box=$("tdList");
+  $("tddTitle").textContent=`${whenText()} のやること`;
+  box.textContent="";
+  if(!list.length) box.textContent=cal.todo?"この日が期日のものはありません。":"まだ受け取っていません。Mac の係が書き出すと、ここに並びます。";
+  for(const it of list){
+    const row=document.createElement("div"),sub=document.createElement("small");
+    if(it.done) row.className="done";
+    row.textContent=(it.done?"済　":"")+it.t;
+    sub.innerHTML=todoSub(it);
+    row.append(sub);box.append(row);
+  }
+  $("tdd").showModal();
+}
+function hitTodo(x,y){
+  for(const el of document.elementsFromPoint(x,y)){if(el.closest&&el.closest("[data-td]")) return true}
+  return false;
+}
 /* 説明欄は HTML で来ることがある。実行も読み込みもしない形で文字だけ取り出す */
 function descText(raw){
   const s=String(raw).replace(/<br\s*\/?>/gi,"\n").replace(/<\/(p|div|li)>/gi,"\n");
@@ -432,7 +563,7 @@ function blocks(list,x,w,head,attr,showDesc){
   }).join("");
 }
 function applyCal(data){
-  cal=data;rebuildDays();renderTemplate();
+  cal=data;rebuildDays();rebuildTodos();renderTemplate();
 }
 const CAL_RE=/^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/;
 let calSyncing=false;
@@ -471,9 +602,11 @@ async function renderCalSettings(){
   const url=await idbGet("meta","calUrl").catch(()=>null);
   $("calConnect").hidden=!!url;$("calOn").hidden=!url;
   if(!url){
+    $("todoInfo").textContent="";
     $("calInfo").textContent="予定を受け取るアドレスを貼り付けると、Google カレンダーの予定が紙に表示されます。手帳からカレンダーを変更することはありません。";
     return;
   }
+  $("todoInfo").textContent=cal.todo&&cal.todo.at?`やること：奉仕の手帳から ${new Date(cal.todo.at).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})} に書き出したものを表示しています（${todos.length} 件）。`:"やること：まだ受け取っていません。";
   $("calInfo").textContent=cal.at?`最後に受け取ったのは ${new Date(cal.at).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})} です。Wi-Fi があるときに自動で更新します。表示するカレンダーを選べます。`:"まだ予定を受け取っていません。";
   const box=$("calList");box.textContent="";
   for(const c of cal.cals){
@@ -635,7 +768,34 @@ async function importBackup(file){
 }
 
 /* 入力 */
-let cur_stroke=null,activeId=null,lastPen=0,gesture=null,erasing=null;
+let cur_stroke=null,activeId=null,lastPen=0,gesture=null,erasing=null,pinch=null;
+const fingers=new Map();
+function startPinch(){
+  if(activeId!==null&&fingers.has(activeId)){
+    const p=page();
+    if(erasing){
+      const items=erasing.items;erasing=null;
+      if(items.length){p.undo.push({del:items});p.redo=[];touched(p);syncButtons()}
+    }else{cur_stroke=null;lctx.clearRect(0,0,W,H);redraw()}
+    activeId=null;
+  }
+  gesture={dead:true};
+  const[a,b]=[...fingers.values()],[ox,oy]=paperOrigin();
+  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+  pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,z:zoom.z,px:(mx-ox-zoom.x)/zoom.z,py:(my-oy-zoom.y)/zoom.z};
+}
+function movePinch(){
+  const[a,b]=[...fingers.values()],[ox,oy]=paperOrigin();
+  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+  zoom.z=Math.max(1,Math.min(4,pinch.z*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d));
+  zoom.x=mx-ox-pinch.px*zoom.z;zoom.y=my-oy-pinch.py*zoom.z;
+  applyZoom();
+}
+function fingerUp(e){
+  if(e.pointerType!=="touch") return;
+  fingers.delete(e.pointerId);
+  if(pinch&&fingers.size<2){pinch=null;if(zoom.z<1.08) resetZoom();else rasterSoon()}
+}
 function toLogical(e){
   const r=ink.getBoundingClientRect();
   return [Math.round((e.clientX-r.left)/r.width*W*10),Math.round((e.clientY-r.top)/r.height*H*10)];
@@ -658,7 +818,7 @@ function eventsOf(e){
   const list=e.getCoalescedEvents?e.getCoalescedEvents():[];
   return list.length?list:[e];
 }
-function goTo(str){flush();cur=fromYmd(str);view="day";refresh()}
+function goTo(str){flush();resetZoom();cur=fromYmd(str);view="day";refresh()}
 function hitGo(x,y){
   for(const el of document.elementsFromPoint(x,y)){const go=el.closest&&el.closest("[data-go]");if(go) return go.dataset.go}
   return null;
@@ -681,9 +841,14 @@ function drawInput(e){
 function down(e){
   const p=page();
   if(e.pointerType==="pen"){lastPen=Date.now();gesture=null}
+  if(e.pointerType==="touch"){
+    fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(fingers.size===2&&Date.now()-lastPen>800){startPinch();return}
+    if(fingers.size>1) return;
+  }
   if(!drawInput(e)){
     if(Date.now()-lastPen<800) return;
-    gesture=gesture?{dead:true}:{id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now()};
+    gesture=gesture?{dead:true}:{id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),far:0};
     return;
   }
   if(activeId!==null||(e.pointerType==="mouse"&&e.button!==0)) return;
@@ -696,6 +861,16 @@ function down(e){
 }
 function move(e){
   if(e.pointerType==="pen") lastPen=Date.now();
+  const f=e.pointerType==="touch"&&fingers.get(e.pointerId);
+  if(f){
+    const dx=e.clientX-f.x,dy=e.clientY-f.y;
+    f.x=e.clientX;f.y=e.clientY;
+    if(pinch){if(fingers.size===2) movePinch();return}
+    if(gesture&&!gesture.dead&&gesture.id===e.pointerId&&zoom.z>1){
+      gesture.far+=Math.abs(dx)+Math.abs(dy);
+      zoom.x+=dx;zoom.y+=dy;applyZoom();return;
+    }
+  }
   if(e.pointerId!==activeId) return;
   if(erasing){eventsOf(e).forEach(eraseAt);return}
   if(!cur_stroke) return;
@@ -714,7 +889,10 @@ function finish(e,cancelled){
   const s=cur_stroke;cur_stroke=null;lctx.clearRect(0,0,W,H);
   if(!s) return;
   if(e.pointerType==="mouse"&&!cancelled&&s.pts.length<=3){
-    if(view==="day"){const ev=hitEvent(e.clientX,e.clientY);if(ev){showEvent(ev);return}}
+    if(view==="day"){
+      const ev=hitEvent(e.clientX,e.clientY);if(ev){showEvent(ev);return}
+      if(hitTodo(e.clientX,e.clientY)){showTodos();return}
+    }
     const go=hitGo(e.clientX,e.clientY);
     if(go&&view!=="day"){goTo(go);return}
   }
@@ -728,16 +906,21 @@ function touchUp(e){
   gesture=null;
   if(Date.now()-lastPen<800) return;
   const dx=e.clientX-g.x,dy=e.clientY-g.y,ax=Math.abs(dx),ay=Math.abs(dy);
-  if(ax>70&&ax>ay*1.5){step(dx<0?1:-1);return}
-  if(ax<12&&ay<12&&Date.now()-g.t<500){
-    if(view==="day"){const ev=hitEvent(e.clientX,e.clientY);if(ev) showEvent(ev)}
+  if(zoom.z===1&&ax>70&&ax>ay*1.5){step(dx<0?1:-1);return}
+  if(ax<12&&ay<12&&g.far<24&&Date.now()-g.t<500){
+    if(view==="day"){const ev=hitEvent(e.clientX,e.clientY);if(ev) showEvent(ev);else if(hitTodo(e.clientX,e.clientY)) showTodos()}
     else{const go=hitGo(e.clientX,e.clientY);if(go) goTo(go)}
   }
 }
 ink.addEventListener("pointerdown",down);
 ink.addEventListener("pointermove",move);
-ink.addEventListener("pointerup",e=>{finish(e,false);touchUp(e)});
-ink.addEventListener("pointercancel",e=>{finish(e,true);if(gesture&&gesture.id===e.pointerId)gesture=null});
+ink.addEventListener("pointerup",e=>{fingerUp(e);finish(e,false);touchUp(e)});
+ink.addEventListener("pointercancel",e=>{fingerUp(e);finish(e,true);if(gesture&&(gesture.dead||gesture.id===e.pointerId))gesture=null});
+$("stage").addEventListener("wheel",e=>{
+  if(e.ctrlKey){e.preventDefault();zoomAt(e.clientX,e.clientY,zoom.z*Math.exp(-e.deltaY/100))}
+  else if(zoom.z>1){e.preventDefault();zoom.x-=e.deltaX;zoom.y-=e.deltaY;applyZoom()}
+},{passive:false});
+document.addEventListener("gesturestart",e=>e.preventDefault());
 for(const t of["touchstart","touchmove"]) ink.addEventListener(t,e=>e.preventDefault(),{passive:false});
 ink.addEventListener("contextmenu",e=>e.preventDefault());
 
@@ -767,7 +950,9 @@ function syncButtons(){
     $("w"+i).setAttribute("aria-pressed",tool.width===i);
   }
   $("eraser").setAttribute("aria-pressed",tool.mode==="erase");
-  $("finger").setAttribute("aria-pressed",tool.finger);
+  $("finger").checked=tool.finger;
+  const em=$("evMode");em.dataset.m=evMode;em.setAttribute("aria-label","予定の見せ方："+["ふつう","薄く","隠す"][evMode]);
+  document.body.dataset.show=evMode;
   const p=page();
   $("undo").disabled=!p||!p.undo.length;$("redo").disabled=!p||!p.redo.length;
 }
@@ -782,14 +967,17 @@ function refresh(){
 $("prev").onclick=()=>step(-1);
 $("next").onclick=()=>step(1);
 $("today").onclick=()=>{flush();cur=new Date();refresh()};
-for(const v of["month","week","day"]) $("v-"+v).onclick=()=>{flush();view=v;refresh()};
+for(const v of["month","week","day"]) $("v-"+v).onclick=()=>{flush();if(view!==v) resetZoom();view=v;refresh()};
+$("zoomOut").onclick=resetZoom;
+$("evMode").onclick=()=>{evMode=(evMode+1)%3;try{localStorage.setItem(EVKEY,evMode)}catch(e){}syncButtons()};
+$("tddClose").onclick=()=>$("tdd").close();
 for(let i=0;i<3;i++){
   $("c"+i).onclick=()=>{tool.color=i;tool.mode="pen";syncButtons()};
   $("w"+i).onclick=()=>{tool.width=i;tool.mode="pen";syncButtons()};
 }
 $("eraser").onclick=()=>{tool.mode=tool.mode==="erase"?"pen":"erase";syncButtons()};
 $("undo").onclick=undo;$("redo").onclick=redo;
-$("finger").onclick=()=>{tool.finger=!tool.finger;syncButtons()};
+$("finger").onchange=()=>{tool.finger=$("finger").checked;try{localStorage.setItem(FINGERKEY,tool.finger?"1":"0")}catch(e){}syncButtons()};
 $("backup").onclick=()=>{flush();bkMsg("");calMsg("");refreshBackupInfo();renderCalSettings();$("bk").showModal()};
 $("calSave").onclick=calConnect;
 $("calNow").onclick=()=>calSync(true);
